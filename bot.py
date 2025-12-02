@@ -147,6 +147,8 @@ def validate_topic(topic):
     return topic
 
 def split_text_into_sentences(text, max_length=200):
+    # Remove asterisks from text before TTS generation
+    text = text.replace('*', '')
     sentences = re.split(r'([.!?])\s+', text)
     result = []
     for i in range(0, len(sentences)-1, 2):
@@ -179,6 +181,8 @@ def split_text_into_sentences(text, max_length=200):
 def generate_tts_chirp3_sync(text, voice_name):
     """Generate TTS using Chirp3 HD voices for main texts"""
     try:
+        # Remove asterisks from text
+        text = text.replace('*', '')
         logger.info(f"[Chirp3 TTS] Generating for voice '{voice_name}', text length: {len(text)}")
         client = get_google_tts_client()
         sentences = split_text_into_sentences(text, max_length=200)
@@ -216,6 +220,8 @@ def generate_tts_chirp3_sync(text, voice_name):
 def generate_tts_wavenet_sync(text, voice_name="en-US-Wavenet-H"):
     """Generate TTS using Wavenet voices for Anki cards"""
     try:
+        # Remove asterisks from Anki card text too
+        text = text.replace('*', '')
         logger.info(f"[Wavenet TTS] Generating for '{text[:50]}...' with voice '{voice_name}'")
         client = get_google_tts_client()
         
@@ -449,22 +455,35 @@ def create_html_document(topic, content, timestamp):
     safe_topic = safe_filename(topic)
     html_filename = f"{safe_topic}_{timestamp}_materials.html"
     
+    # Remove asterisks from all text content
+    def remove_asterisks(text):
+        return text.replace('*', '')
+    
+    clean_main_text = remove_asterisks(content['main_text'])
+    clean_positive = remove_asterisks(content['opinion_texts']['positive'])
+    clean_negative = remove_asterisks(content['opinion_texts']['negative'])
+    clean_mixed = remove_asterisks(content['opinion_texts']['mixed'])
+    
     vocab_rows = ""
     for i, item in enumerate(content['collocations'], 1):
+        # Also clean collocation text if it has asterisks
+        clean_english = remove_asterisks(item['english'])
         vocab_rows += f"""
         <tr>
             <td>{i}</td>
-            <td class="english">{item['english']}</td>
+            <td class="english">{clean_english}</td>
             <td class="russian">{item['russian']}</td>
         </tr>
         """
     
     questions_html = ""
     for i, question in enumerate(content['discussion_questions'], 1):
+        # Remove asterisks from questions too
+        clean_question = remove_asterisks(question)
         questions_html += f"""
         <div class="question">
             <span class="question-number">{i}</span>
-            <span class="question-text">{question}</span>
+            <span class="question-text">{clean_question}</span>
         </div>
         """
     
@@ -696,7 +715,7 @@ def create_html_document(topic, content, timestamp):
                     <span class="section-icon">📖</span>
                     Main Text
                 </h2>
-                <div class="main-text">{content['main_text']}</div>
+                <div class="main-text">{clean_main_text}</div>
             </div>
             <!-- Opinion Texts -->
             <div class="section">
@@ -709,21 +728,21 @@ def create_html_document(topic, content, timestamp):
                         <span>😊</span>
                         <span>Positive Reaction</span>
                     </div>
-                    <div class="opinion-text">{content['opinion_texts']['positive']}</div>
+                    <div class="opinion-text">{clean_positive}</div>
                 </div>
                 <div class="opinion-card opinion-negative">
                     <div class="opinion-header">
                         <span>🤔</span>
                         <span>Critical Reaction</span>
                     </div>
-                    <div class="opinion-text">{content['opinion_texts']['negative']}</div>
+                    <div class="opinion-text">{clean_negative}</div>
                 </div>
                 <div class="opinion-card opinion-mixed">
                     <div class="opinion-header">
                         <span>⚖️</span>
                         <span>Balanced Reaction</span>
                     </div>
-                    <div class="opinion-text">{content['opinion_texts']['mixed']}</div>
+                    <div class="opinion-text">{clean_mixed}</div>
                 </div>
             </div>
             <!-- Discussion Questions -->
